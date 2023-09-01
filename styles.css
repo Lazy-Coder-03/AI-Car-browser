@@ -1,0 +1,20 @@
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+  }
+.p5Canvas{
+    border:2px solid black;
+}
+  main {
+    /* Optional: You can set a max-width for your content if needed */
+    max-width: 800px;
+  }      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+      }
