@@ -19,10 +19,13 @@ class Car {
     this.type = type;
     this.maxForce = 0.2; // Maximum force for acceleration
     this.maxTurnForce = 0.1; // Maximum force for turning
-    this.numOfSensors = 7;
-    if (this.type == "player") {
+    this.numOfSensors = 5;
+    if (this.type != "dummy") {
       this.sensor = new Sensor(this, this.fov / 2, this.numOfSensors);
+      this.brain = new NeuralNetwork(this.numOfSensors, 6, 5);
+      this.offsets = Array(this.numOfSensors);
     }
+    this.useBrain = type=="AI"?true:false;
     this.moving = false;
     this.polygon = this.createPolygon();
     this.left = -this.w / 2;
@@ -39,9 +42,11 @@ class Car {
       [bottomRight, bottomLeft],
       [bottomLeft, topLeft],
     ];
+    this.controls=new Controls();
     this.collided = false;
     this.isAlive = true;
     this.spawnTime = millis();
+    this.decisions=[];
   }
   createPolygon() {
     const halfWidth = this.w / 2;
@@ -142,7 +147,7 @@ class Car {
     //   ellipse(p.x, p.y, 10, 10);
     // }
     this.showCollisionBox();
-    if (this.type == "player") this.sensor.show();
+    if (this.type != "dummy") this.sensor.show();
   }
 
   isFacingUp() {
@@ -184,33 +189,147 @@ class Car {
         if (this.vel.mag() > 0) return;
       }
     }
+    else{
+      this.collided = false;
+      if (!this.isAlive) {
+        this.sensor.update(roadBorders, traffic);
+        return;
+      }
+      //this.oldmove()
+      //this.move();
 
-    this.collided = false;
-    if (!this.isAlive) {
       this.sensor.update(roadBorders, traffic);
-      return;
+      for (let i = 0; i < this.sensor.distances.length; i++)
+        this.offsets[i] = 1 - this.sensor.distances[i];
+      //console.log(this.offsets);
+      //const output=this.brain.feedForward(this.offsets);
+      this.decisions = NeuralNetwork.feedForward(this.offsets, this.brain);
+      console.log(this.decisions);
+      this.AImove(this.decisions);
+
+      //console.log(outputs);
+      this.polygon = this.createPolygon();
+      this.wrapAroundCanvas();
+      if (this.checkCollisionTraffic(traffic)) {
+        this.isAlive = false;
+        this.collided = true;
+        console.log("collided with traffic");
+        this.vel.mult(0);
+      }
+      if (this.checkCollisionRoad(roadBorders)) {
+        this.isAlive = false;
+        this.collided = true;
+        console.log("collided");
+        this.vel.mult(0);
+      }
     }
-    this.move();
-    this.sensor.update(roadBorders, traffic);
-    this.polygon = this.createPolygon();
-    this.wrapAroundCanvas();
-    if (this.checkCollisionTraffic(traffic)) {
-      this.isAlive = false;
-      this.collided = true;
-      console.log("collided with traffic");
-      this.vel.mult(0);
-    }
-    if (this.checkCollisionRoad(roadBorders)) {
-      this.isAlive = false;
-      this.collided = true;
-      console.log("collided");
-      this.vel.mult(0);
-    }
+
+    
     // console.log(this.sensor.roadDistances, this.sensor.trafficDistances);
     //console.log(this.sensor.distances);
   }
 
-  move() {
+  AImove(decision){
+    this.acc.set(0, 0);
+    if (this.vel.mag() < 0.1) {
+      this.vel.set(0, 0);
+      this.moving = false;
+    }
+    else {
+      this.moving = true;
+    }
+
+    if(decision[0]==1){
+      this.angle -= this.angularSpeed * this.flip;
+      if (this.angle < 0) this.angle += 2 * PI;
+    }
+
+    if(decision[1]==1){
+      this.angle += this.angularSpeed * this.flip;
+      if (this.angle > 2 * PI) this.angle -= 2 * PI;
+    }
+
+    const directionX = sin(this.angle);
+    const directionY = cos(this.angle);
+
+    if(decision[2]==1){
+      this.flip = 1;
+      this.acc.add(createVector(directionX, -directionY).mult(this.maxForce));
+    }
+
+    if(decision[3]==1){
+      const reverseAcc = createVector(-directionX, directionY).mult(
+        this.maxForce * 0.75
+      );
+      this.flip = -1;
+      this.acc.add(reverseAcc);
+    }
+
+    if(decision[4]==1){
+      this.vel.mult(0.9);
+    }
+
+    this.vel.add(this.acc);
+    this.vel.limit(this.maxSpeed * this.speedfactor);
+    this.pos.add(this.vel);
+    this.vel.mult(1 - friction);
+
+
+
+
+  }
+
+
+
+
+  move(){
+    this.acc.set(0, 0);
+    if (this.vel.mag() < 0.1) {
+      this.vel.set(0, 0);
+      this.moving = false;
+    }
+    else {
+      this.moving = true;
+    }
+
+    if (this.controls.left) {
+      this.angle -= this.angularSpeed * this.flip;
+      if (this.angle < 0) this.angle += 2 * PI;
+    }
+
+    if (this.controls.right) {
+      this.angle += this.angularSpeed * this.flip;
+      if (this.angle > 2 * PI) this.angle -= 2 * PI;
+    }
+
+    const directionX = sin(this.angle);
+    const directionY = cos(this.angle);
+
+    if (this.controls.forward) {
+      this.flip = 1;
+      this.acc.add(createVector(directionX, -directionY).mult(this.maxForce));
+    }
+
+    if (this.controls.backward) {
+      const reverseAcc = createVector(-directionX, directionY).mult(
+        this.maxForce * 0.75
+      );
+      this.flip = -1;
+      this.acc.add(reverseAcc);
+    }
+    if (this.controls.brake) {
+      this.vel.mult(0.9);
+    }
+    console.log(this.controls)
+    this.vel.add(this.acc);
+    this.vel.limit(this.maxSpeed * this.speedfactor);
+    this.pos.add(this.vel);
+    this.vel.mult(1 - friction);
+  }
+
+
+
+  oldmove() {
     this.acc.set(0, 0);
     if (this.vel.mag() < 0.1) {
       this.vel.set(0, 0);

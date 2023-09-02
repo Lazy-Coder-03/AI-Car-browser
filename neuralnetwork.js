@@ -1,3 +1,30 @@
+class NeuralNetwork {
+    constructor(inputCount, hiddenCount, outputCount) {
+        this.levels = [];
+        if (Array.isArray(inputCount)) {
+            // Constructor with an array parameter
+            for (let i = 0; i < inputCount.length - 1; i++) {
+                this.levels.push(new Level(inputCount[i], inputCount[i + 1]));
+            }
+        } else {
+            // Constructor with individual parameters
+            this.levels.push(new Level(inputCount, hiddenCount));
+            this.levels.push(new Level(hiddenCount, outputCount));
+        }
+    }
+
+    static feedForward(givenInputs, neuralNetwork) {
+        let outputs = Level.feedForward(givenInputs, neuralNetwork.levels[0]);
+        for (let i = 1; i < neuralNetwork.levels.length; i++) {
+            outputs = Level.feedForward(outputs, neuralNetwork.levels[i]);
+        }
+        return outputs;
+    }
+}
+
+
+
+
 class Level{
     constructor(inputCount, outputCount){
         this.inputs=new Array(inputCount);
@@ -20,7 +47,7 @@ class Level{
         }
     }
 
-    static feedForward(givenInputs,level){
+    static feedForward(givenInputs,level,method=applyStepActivation){
         for(let i=0;i<givenInputs.length;i++){
             level.inputs[i]=givenInputs[i];
         }
@@ -32,8 +59,16 @@ class Level{
             //using step threshold
             //level.outputs[i]=stepThreshold(sum,level.biases[i])
             //using sigmoid
-            //sum+=level.biases[i];
-            //level.outputs[i]=sigmoid(sum);
+            switch(method){
+                case sigmoid:
+                    level.outputs[i]=sigmoid(sum+level.biases[i]);
+                    break;
+                case applyStepActivation:
+                    level.outputs[i]=applyStepActivation(sum,level.biases[i]);
+                    break;
+                default:
+                    level.outputs[i]=applyStepActivation(sum,level.biases[i]);   
+            }
 
             //food for thought: what if we used a different activation function?
             //scientist method:
@@ -43,8 +78,7 @@ class Level{
             //    level.outputs[i]=0;
             //}
             //using the step activation function
-            level.outputs[i]=applyStepActivation(sum,level.biases[i]);
-
+            //level.outputs[i]=applyStepActivation(sum,level.biases[i]);
         }
         return level.outputs;
     }

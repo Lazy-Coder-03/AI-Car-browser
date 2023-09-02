@@ -23,8 +23,8 @@ function setup() {
     0,
     road.getLaneWidth() * 0.6,
     1,
-    "player"
-  );
+    "AI"
+  );//"player" instead of AI to control urself
   const randomLane = Math.floor(Math.random() * numOfLanes); // Random lane between 0 and numOfLanes-1
   const randomX = road.getLaneCenter(randomLane);
   const v = 0.5; //Math.random(0.2,0.5);
