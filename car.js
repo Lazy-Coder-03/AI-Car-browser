@@ -19,10 +19,11 @@ class Car {
     this.type = type;
     this.maxForce = 0.2; // Maximum force for acceleration
     this.maxTurnForce = 0.1; // Maximum force for turning
-    this.numOfSensors = 5;
+    this.numOfSensors = 9;
     if (this.type != "dummy") {
       this.sensor = new Sensor(this, this.fov / 2, this.numOfSensors);
-      this.brain = new NeuralNetwork(this.numOfSensors, 6, 5);
+      //this.brain = new NeuralNetwork(this.numOfSensors, 6, 5);
+      this.brain = new NeuralNetwork(this.numOfSensors, 6, 3);
       this.offsets = Array(this.numOfSensors);
     }
     this.useBrain = type=="AI"?true:false;
@@ -239,25 +240,29 @@ class Car {
       this.moving = true;
     }
 
-    if(decision[0]==1){
+    if(decision[0]==1 && decision[1]!=1){
       this.angle -= this.angularSpeed * this.flip;
       if (this.angle < 0) this.angle += 2 * PI;
     }
 
-    if(decision[1]==1){
+    if(decision[1]==1 && decision[0]!=1){
       this.angle += this.angularSpeed * this.flip;
       if (this.angle > 2 * PI) this.angle -= 2 * PI;
     }
+    if(decision[2]==1){
+      this.vel.mult(0.9);
+    }
 
+    //5 outputs 0,1,2,3,4
     const directionX = sin(this.angle);
     const directionY = cos(this.angle);
 
-    if(decision[2]==1){
+    if(true){
       this.flip = 1;
       this.acc.add(createVector(directionX, -directionY).mult(this.maxForce));
     }
 
-    if(decision[3]==1){
+    if(false){
       const reverseAcc = createVector(-directionX, directionY).mult(
         this.maxForce * 0.75
       );
@@ -265,9 +270,9 @@ class Car {
       this.acc.add(reverseAcc);
     }
 
-    if(decision[4]==1){
-      this.vel.mult(0.9);
-    }
+    // if(decision[4]==1){
+    //   this.vel.mult(0.9);
+    // }
 
     this.vel.add(this.acc);
     this.vel.limit(this.maxSpeed * this.speedfactor);

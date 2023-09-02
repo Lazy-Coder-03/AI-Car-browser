@@ -2,7 +2,7 @@ class Sensor {
   constructor(car, fov, n) {
     this.car = car;
     this.rayCount = n;
-    this.rayLength = (width/2)-25;
+    this.rayLength = (width);
     this.rayAngle = fov;
     this.rays = Array(n)
       .fill()

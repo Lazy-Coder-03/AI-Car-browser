@@ -3,11 +3,12 @@
 let car;
 let img;
 let road;
+let halfWidth;
 //let sens;
 let traffic;
 const maxTraffic = 10;
 const friction = 0.02;
-const numOfLanes = 3;
+const numOfLanes = 5;
 const startingLane = Math.floor(numOfLanes / 2);
 let startSim = false;
 let lastSpawnDistance = 0;
@@ -15,6 +16,7 @@ let lastSpawnTime = 0;
 const spawnDistanceInterval = 500;
 function setup() {
   createCanvas(500, windowHeight);
+  halfWidth = width / 2;
   frameRate(60)
   road = new Road(width / 2, width * 0.9, numOfLanes);
   car = new Car(
