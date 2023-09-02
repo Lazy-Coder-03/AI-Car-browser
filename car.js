@@ -23,10 +23,10 @@ class Car {
     if (this.type != "dummy") {
       this.sensor = new Sensor(this, this.fov / 2, this.numOfSensors);
       //this.brain = new NeuralNetwork(this.numOfSensors, 6, 5);
-      this.brain = new NeuralNetwork([this.numOfSensors, 8, 3]);//for now only 3 layers
+      this.brain = new NeuralNetwork([this.numOfSensors, 8, 3]); //for now only 3 layers
       this.offsets = Array(this.numOfSensors);
     }
-    this.useBrain = type=="AI"?true:false;
+    this.useBrain = type == "AI" ? true : false;
     this.moving = false;
     this.polygon = this.createPolygon();
     this.left = -this.w / 2;
@@ -43,11 +43,11 @@ class Car {
       [bottomRight, bottomLeft],
       [bottomLeft, topLeft],
     ];
-    this.controls=new Controls();
+    this.controls = new Controls();
     this.collided = false;
     this.isAlive = true;
     this.spawnTime = millis();
-    this.decisions=[];
+    this.decisions = [];
   }
   createPolygon() {
     const halfWidth = this.w / 2;
@@ -189,8 +189,7 @@ class Car {
         this.polygon = this.createPolygon();
         if (this.vel.mag() > 0) return;
       }
-    }
-    else{
+    } else {
       this.collided = false;
       if (!this.isAlive) {
         this.sensor.update(roadBorders, traffic);
@@ -225,31 +224,29 @@ class Car {
       }
     }
 
-    
     // console.log(this.sensor.roadDistances, this.sensor.trafficDistances);
     //console.log(this.sensor.distances);
   }
 
-  AImove(decision){
+  AImove(decision) {
     this.acc.set(0, 0);
     if (this.vel.mag() < 0.1) {
       this.vel.set(0, 0);
       this.moving = false;
-    }
-    else {
+    } else {
       this.moving = true;
     }
 
-    if(decision[0]>0.5 && decision[1] < 0.5){
+    if (decision[0] > 0.5 && decision[1] < 0.5) {
       this.angle -= this.angularSpeed * this.flip;
       if (this.angle < 0) this.angle += 2 * PI;
     }
 
-    if(decision[1]>0.5 && decision[0]<0.5){
+    if (decision[1] > 0.5 && decision[0] < 0.5) {
       this.angle += this.angularSpeed * this.flip;
       if (this.angle > 2 * PI) this.angle -= 2 * PI;
     }
-    if(decision[2]>0.5){
+    if (decision[2] > 0.5) {
       this.vel.mult(0.9);
     }
 
@@ -257,12 +254,12 @@ class Car {
     const directionX = sin(this.angle);
     const directionY = cos(this.angle);
 
-    if(true){
+    if (true) {
       this.flip = 1;
       this.acc.add(createVector(directionX, -directionY).mult(this.maxForce));
     }
 
-    if(false){
+    if (false) {
       const reverseAcc = createVector(-directionX, directionY).mult(
         this.maxForce * 0.75
       );
@@ -278,22 +275,14 @@ class Car {
     this.vel.limit(this.maxSpeed * this.speedfactor);
     this.pos.add(this.vel);
     this.vel.mult(1 - friction);
-
-
-
-
   }
 
-
-
-
-  move(){
+  move() {
     this.acc.set(0, 0);
     if (this.vel.mag() < 0.1) {
       this.vel.set(0, 0);
       this.moving = false;
-    }
-    else {
+    } else {
       this.moving = true;
     }
 
@@ -325,14 +314,12 @@ class Car {
     if (this.controls.brake) {
       this.vel.mult(0.9);
     }
-    console.log(this.controls)
+    console.log(this.controls);
     this.vel.add(this.acc);
     this.vel.limit(this.maxSpeed * this.speedfactor);
     this.pos.add(this.vel);
     this.vel.mult(1 - friction);
   }
-
-
 
   oldmove() {
     this.acc.set(0, 0);

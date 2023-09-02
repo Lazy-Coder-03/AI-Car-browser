@@ -15,12 +15,12 @@ let lastSpawnDistance = 0;
 let lastSpawnTime = 0;
 const spawnDistanceInterval = 500;
 let lastRandomlane = startingLane;
-let spawned=false;
-let nnv
+let spawned = false;
+let nnv;
 function setup() {
   createCanvas(1000, windowHeight);
   halfWidth = width / 2;
-  frameRate(60)
+  frameRate(60);
   road = new Road(halfWidth / 2, halfWidth * 0.9, numOfLanes);
   car = new Car(
     road.getLaneCenter(startingLane),
@@ -29,7 +29,7 @@ function setup() {
     road.getLaneWidth() * 0.6,
     1,
     "AI"
-  );//"player" instead of AI to control urself
+  ); //"player" instead of AI to control urself
   const randomLane = Math.floor(Math.random() * numOfLanes); // Random lane between 0 and numOfLanes-1
   const randomX = road.getLaneCenter(randomLane);
   const v = 0.5; //Math.random(0.2,0.5);
@@ -52,22 +52,18 @@ function draw() {
     startSim = true;
   }
   main();
-  fill(51)
-  rect(halfWidth,0,halfWidth,height)
-  Visualizer.drawNetwork(halfWidth,height/2,car.brain)
+  fill(51);
+  rect(halfWidth, 0, halfWidth, height);
+  Visualizer.drawNetwork(halfWidth, height / 2, car.brain);
   //draw neaural network in the right half of the screen
- // drawNeuralNetwork(halfWidth*1.5,height/2,40,car.brain)
+  // drawNeuralNetwork(halfWidth*1.5,height/2,40,car.brain)
   //nnv.show()
-
 }
 
-
-
-
 function spawnTraffic() {
-  if(frameCount%100*frameRate()==0){
-    spawned=false;
-    console.log("reset spawned")
+  if ((frameCount % 100) * frameRate() == 0) {
+    spawned = false;
+    console.log("reset spawned");
   }
   if (startSim && !spawned && car.isAlive && round(car.pos.y) % 1000 <= car.h) {
     const spawnProbability = 0.01; // Adjust this value to control spawn frequency
@@ -92,7 +88,7 @@ function spawnTraffic() {
       // Check if the new car collides with any existing traffic cars or itself
       if (!newTrafficCar.checkCollisionTraffic([...traffic, newTrafficCar])) {
         traffic.push(newTrafficCar);
-        spawned=true;
+        spawned = true;
         console.log("Spawned traffic car in lane " + randomLane);
         if (traffic.length > maxTraffic) {
           // Remove the oldest car (first element) in the traffic array

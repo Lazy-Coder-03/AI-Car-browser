@@ -2,7 +2,7 @@ class Sensor {
   constructor(car, fov, n) {
     this.car = car;
     this.rayCount = n;
-    this.rayLength = (halfWidth);
+    this.rayLength = halfWidth;
     this.rayAngle = fov;
     this.rays = Array(n)
       .fill()
@@ -67,7 +67,10 @@ class Sensor {
   show() {
     for (let i = 0; i < this.rayCount; i++) {
       let length = this.distances[i] * this.rayLength;
-      let a = this.car.angle + map(i, 0, this.rayCount - 1, -this.rayAngle, this.rayAngle)-PI/2;
+      let a =
+        this.car.angle +
+        map(i, 0, this.rayCount - 1, -this.rayAngle, this.rayAngle) -
+        PI / 2;
       let x = length * cos(a);
       let y = length * sin(a);
       push();
