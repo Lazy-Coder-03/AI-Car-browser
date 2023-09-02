@@ -19,11 +19,11 @@ class Car {
     this.type = type;
     this.maxForce = 0.2; // Maximum force for acceleration
     this.maxTurnForce = 0.1; // Maximum force for turning
-    this.numOfSensors = 9;
+    this.numOfSensors = 5;
     if (this.type != "dummy") {
       this.sensor = new Sensor(this, this.fov / 2, this.numOfSensors);
       //this.brain = new NeuralNetwork(this.numOfSensors, 6, 5);
-      this.brain = new NeuralNetwork(this.numOfSensors, 6, 3);
+      this.brain = new NeuralNetwork([this.numOfSensors, 8, 3]);//for now only 3 layers
       this.offsets = Array(this.numOfSensors);
     }
     this.useBrain = type=="AI"?true:false;
@@ -205,7 +205,7 @@ class Car {
       //console.log(this.offsets);
       //const output=this.brain.feedForward(this.offsets);
       this.decisions = NeuralNetwork.feedForward(this.offsets, this.brain);
-      console.log(this.decisions);
+      //console.log(this.decisions);
       this.AImove(this.decisions);
 
       //console.log(outputs);
@@ -240,16 +240,16 @@ class Car {
       this.moving = true;
     }
 
-    if(decision[0]==1 && decision[1]!=1){
+    if(decision[0]>0.5 && decision[1] < 0.5){
       this.angle -= this.angularSpeed * this.flip;
       if (this.angle < 0) this.angle += 2 * PI;
     }
 
-    if(decision[1]==1 && decision[0]!=1){
+    if(decision[1]>0.5 && decision[0]<0.5){
       this.angle += this.angularSpeed * this.flip;
       if (this.angle > 2 * PI) this.angle -= 2 * PI;
     }
-    if(decision[2]==1){
+    if(decision[2]>0.5){
       this.vel.mult(0.9);
     }
 
@@ -380,8 +380,8 @@ class Car {
 
   wrapAroundCanvas() {
     if (this.pos.x + this.w / 2 < 0) {
-      this.pos.x = width + this.w / 2;
-    } else if (this.pos.x - this.w / 2 > width) {
+      this.pos.x = halfWidth + this.w / 2;
+    } else if (this.pos.x - this.w / 2 > halfWidth) {
       this.pos.x = -this.w / 2;
     }
 

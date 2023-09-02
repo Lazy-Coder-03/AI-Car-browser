@@ -1,10 +1,10 @@
 class Road{
-    constructor(x,width,lanecount=2){
+    constructor(x,wid,lanecount=2){
         this.x = x;
-        this.width = width;
+        this.wid = wid;
         this.lanecount = lanecount;
-        this.left=x-width/2;
-        this.right=x+width/2;
+        this.left=x-this.wid/2;
+        this.right=x+this.wid/2;
         this.top=-100000//-height;
         this.bottom=100000//height;
         const topLeft={x:this.left,y:this.top};
@@ -34,11 +34,11 @@ class Road{
         pop()
     }
     getLaneCenter(laneIndex){
-        let laneWidth=this.width/this.lanecount;
+        let laneWidth=this.wid/this.lanecount;
 
         return this.left+laneWidth*(laneIndex+0.5);
     }
     getLaneWidth(){
-        return this.width/this.lanecount;
+        return this.wid/this.lanecount;
     }
 }

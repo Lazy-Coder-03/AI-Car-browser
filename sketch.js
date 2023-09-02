@@ -14,11 +14,14 @@ let startSim = false;
 let lastSpawnDistance = 0;
 let lastSpawnTime = 0;
 const spawnDistanceInterval = 500;
+let lastRandomlane = startingLane;
+let spawned=false;
+let nnv
 function setup() {
-  createCanvas(500, windowHeight);
+  createCanvas(1000, windowHeight);
   halfWidth = width / 2;
   frameRate(60)
-  road = new Road(width / 2, width * 0.9, numOfLanes);
+  road = new Road(halfWidth / 2, halfWidth * 0.9, numOfLanes);
   car = new Car(
     road.getLaneCenter(startingLane),
     1000,
@@ -40,6 +43,7 @@ function setup() {
       "dummy"
     ),
   ];
+  //nnv=new NNvisual(0,0,200,200,10,car.brain)
 }
 
 function draw() {
@@ -47,11 +51,19 @@ function draw() {
   if (keyIsDown(83)) {
     startSim = true;
   }
-
   main();
+  fill(51)
+  rect(halfWidth,0,halfWidth,height)
+  Visualizer.drawNetwork(halfWidth,height/2,car.brain)
+  //draw neaural network in the right half of the screen
+ // drawNeuralNetwork(halfWidth*1.5,height/2,40,car.brain)
+  //nnv.show()
+
 }
-let lastRandomlane = startingLane;
-let spawned=false;
+
+
+
+
 function spawnTraffic() {
   if(frameCount%100*frameRate()==0){
     spawned=false;
@@ -122,7 +134,7 @@ function main() {
 function centerCameraOnCar(car, easing = 1) {
   let offsetX = 0; //- car.pos.x;
   let offsetY = height / 2 - car.pos.y;
-  //offsetX = lerp(offsetX, width / 2 - car.pos.x, easing);
+  //offsetX = lerp(offsetX, halfWidth / 2 - car.pos.x, easing);
   offsetY = lerp(offsetY, height / 2 - car.pos.y, easing);
 
   return [offsetX, offsetY];
