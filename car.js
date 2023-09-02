@@ -1,5 +1,5 @@
 class Car {
-  constructor(x, y, ang, wid, type, col) {
+  constructor(x, y, ang, wid, speedfactor, type, col) {
     this.pos = createVector(x, y);
     this.vel = createVector(0, 0);
     this.acc = createVector(0, 0);
@@ -10,6 +10,7 @@ class Car {
     } else {
       this.col = [col[0], col[1], col[2]];
     }
+    this.speedfactor = speedfactor;
     this.angle = radians(ang);
     this.maxSpeed = 10;
     this.angularSpeed = radians(2);
@@ -22,21 +23,21 @@ class Car {
     if (this.type == "player") {
       this.sensor = new Sensor(this, this.fov / 2, this.numOfSensors);
     }
-    this.moving=false;
+    this.moving = false;
     this.polygon = this.createPolygon();
-    this.left=-this.w/2;
-    this.right=this.w/2;
-    this.top=-this.h/2;
-    this.bottom=this.h/2;
-    const topLeft={x:this.left,y:this.top};
-    const topRight={x:this.right,y:this.top};
-    const bottomLeft={x:this.left,y:this.bottom};
-    const bottomRight={x:this.right,y:this.bottom};
-    this.borders=[
-        [topLeft,topRight],
-        [topRight,bottomRight],
-        [bottomRight,bottomLeft],
-        [bottomLeft,topLeft]
+    this.left = -this.w / 2;
+    this.right = this.w / 2;
+    this.top = -this.h / 2;
+    this.bottom = this.h / 2;
+    const topLeft = { x: this.left, y: this.top };
+    const topRight = { x: this.right, y: this.top };
+    const bottomLeft = { x: this.left, y: this.bottom };
+    const bottomRight = { x: this.right, y: this.bottom };
+    this.borders = [
+      [topLeft, topRight],
+      [topRight, bottomRight],
+      [bottomRight, bottomLeft],
+      [bottomLeft, topLeft],
     ];
     this.collided = false;
     this.isAlive = true;
@@ -141,8 +142,7 @@ class Car {
     //   ellipse(p.x, p.y, 10, 10);
     // }
     this.showCollisionBox();
-    if(this.type=="player")
-      this.sensor.show();
+    if (this.type == "player") this.sensor.show();
   }
 
   isFacingUp() {
@@ -171,19 +171,17 @@ class Car {
         const directionY = cos(this.angle);
         this.flip = 1;
         this.acc.add(
-          createVector(directionX, -directionY).mult(this.maxForce * 0.2)
+          createVector(directionX, -directionY).mult(this.maxForce * 0.5)
         );
         this.vel.add(this.acc);
-        this.vel.limit(this.maxSpeed / 2);
+        this.vel.limit(this.maxSpeed * this.speedfactor);
         this.pos.add(this.vel);
         this.vel.mult(1 - friction);
         if (this.angle < 0) this.angle += 2 * PI;
         if (this.angle > 2 * PI) this.angle -= 2 * PI;
         //this.sensor.update(roadBorders);
         this.polygon = this.createPolygon();
-        if(this.vel.mag()>0)
-          
-        return;
+        if (this.vel.mag() > 0) return;
       }
     }
 
@@ -208,19 +206,19 @@ class Car {
       console.log("collided");
       this.vel.mult(0);
     }
-   // console.log(this.sensor.roadDistances, this.sensor.trafficDistances);
+    // console.log(this.sensor.roadDistances, this.sensor.trafficDistances);
     //console.log(this.sensor.distances);
   }
 
   move() {
     this.acc.set(0, 0);
     if (this.vel.mag() < 0.1) {
-      this.moving = false;
       this.vel.set(0, 0);
-    }
-    else{
+      this.moving = false;
+    } else {
       this.moving = true;
     }
+    console.log(this.moving);
 
     if (keyIsDown(LEFT_ARROW)) {
       this.angle -= this.angularSpeed * this.flip;
