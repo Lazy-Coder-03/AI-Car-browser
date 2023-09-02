@@ -13,20 +13,14 @@ class Sensor {
   }
 
   update(roadBorders, traffic) {
-    this.castRaysTraffic(traffic);
-    this.castRaysBorders(roadBorders);
-    this.roadDistances = this.roadDistances.map((distance) =>
+    this.castRays(roadBorders, traffic);
+    this.distances = this.distances.map((distance) =>
       map(distance, 0, this.rayLength, 0, 1)
     );
-    this.trafficDistances = this.trafficDistances.map((distance) =>
-      map(distance, 0, this.rayLength, 0, 1)
-    );
-    for (let i = 0; i < this.rayCount; i++) {
-      this.distances[i] = min(this.roadDistances[i], this.trafficDistances[i]);
-    }
+    //console.log(this.distances);
   }
 
-  castRaysTraffic(traffic) {
+  castRays(borders, obstacles) {
     for (let i = 0; i < this.rayCount; i++) {
       const angle =
         map(i, 0, this.rayCount - 1, -this.rayAngle, this.rayAngle) - PI / 2;
@@ -37,11 +31,23 @@ class Sensor {
       let closest = null;
       let record = this.rayLength;
 
-      for (let j = 0; j < traffic.length; j++) {
-        for (let k = 0; k < traffic[j].polygon.length; k++) {
+      for (let j = 0; j < borders.length; j++) {
+        const pt = this.rays[i].cast(borders[j][0], borders[j][1]);
+
+        if (pt) {
+          const d = p5.Vector.dist(this.car.pos, pt);
+          if (d < record) {
+            record = d;
+            closest = pt;
+          }
+        }
+      }
+
+      for (let j = 0; j < obstacles.length; j++) {
+        for (let k = 0; k < obstacles[j].polygon.length; k++) {
           const pt = this.rays[i].cast(
-            traffic[j].polygon[k],
-            traffic[j].polygon[(k + 1) % traffic[j].polygon.length]
+            obstacles[j].polygon[k],
+            obstacles[j].polygon[(k + 1) % obstacles[j].polygon.length]
           );
 
           if (pt) {
@@ -54,34 +60,7 @@ class Sensor {
         }
       }
 
-      this.trafficDistances[i] = record;
-    }
-  }
-
-  castRaysBorders(roadBorders) {
-    for (let i = 0; i < this.rayCount; i++) {
-      const angle =
-        map(i, 0, this.rayCount - 1, -this.rayAngle, this.rayAngle) - PI / 2;
-      this.rays[i].update(this.car, angle);
-    }
-
-    for (let i = 0; i < this.rayCount; i++) {
-      let closest = null;
-      let record = this.rayLength;
-
-      for (let j = 0; j < roadBorders.length; j++) {
-        const pt = this.rays[i].cast(roadBorders[j][0], roadBorders[j][1]);
-
-        if (pt) {
-          const d = p5.Vector.dist(this.car.pos, pt);
-          if (d < record) {
-            record = d;
-            closest = pt;
-          }
-        }
-      }
-
-      this.roadDistances[i] = record;
+      this.distances[i] = record;
     }
   }
 

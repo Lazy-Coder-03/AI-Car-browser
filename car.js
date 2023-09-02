@@ -22,6 +22,7 @@ class Car {
     if (this.type == "player") {
       this.sensor = new Sensor(this, this.fov / 2, this.numOfSensors);
     }
+    this.moving=false;
     this.polygon = this.createPolygon();
     this.left=-this.w/2;
     this.right=this.w/2;
@@ -39,6 +40,7 @@ class Car {
     ];
     this.collided = false;
     this.isAlive = true;
+    this.spawnTime = millis();
   }
   createPolygon() {
     const halfWidth = this.w / 2;
@@ -179,6 +181,8 @@ class Car {
         if (this.angle > 2 * PI) this.angle -= 2 * PI;
         //this.sensor.update(roadBorders);
         this.polygon = this.createPolygon();
+        if(this.vel.mag()>0)
+          
         return;
       }
     }
@@ -205,13 +209,17 @@ class Car {
       this.vel.mult(0);
     }
    // console.log(this.sensor.roadDistances, this.sensor.trafficDistances);
-    console.log(this.sensor.distances);
+    //console.log(this.sensor.distances);
   }
 
   move() {
     this.acc.set(0, 0);
     if (this.vel.mag() < 0.1) {
+      this.moving = false;
       this.vel.set(0, 0);
+    }
+    else{
+      this.moving = true;
     }
 
     if (keyIsDown(LEFT_ARROW)) {
