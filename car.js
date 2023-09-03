@@ -14,16 +14,16 @@ class Car {
     this.angle = radians(ang);
     this.maxSpeed = 10;
     this.angularSpeed = radians(2);
-    this.fov = PI;
+    this.fov = PI / 2;
     this.flip = 1;
     this.type = type;
     this.maxForce = 0.2; // Maximum force for acceleration
     this.maxTurnForce = 0.1; // Maximum force for turning
-    this.numOfSensors = 5;
+    this.numOfSensors = 7;
     if (this.type != "dummy") {
       this.sensor = new Sensor(this, this.fov / 2, this.numOfSensors);
       //this.brain = new NeuralNetwork(this.numOfSensors, 6, 5);
-      this.brain = new NeuralNetwork([this.numOfSensors, 8, 3]); //for now only 3 layers
+      this.brain = new NeuralNetwork([this.numOfSensors, 8, 4]); //for now only 3 layers
       this.offsets = Array(this.numOfSensors);
     }
     this.useBrain = type == "AI" ? true : false;
@@ -246,15 +246,15 @@ class Car {
       this.angle += this.angularSpeed * this.flip;
       if (this.angle > 2 * PI) this.angle -= 2 * PI;
     }
-    if (decision[2] > 0.5) {
+    if (decision[3] > 0.5) {
       this.vel.mult(0.9);
     }
 
     //5 outputs 0,1,2,3,4
     const directionX = sin(this.angle);
     const directionY = cos(this.angle);
-
-    if (true) {
+//forward
+    if (decision[2] > 0.5) {
       this.flip = 1;
       this.acc.add(createVector(directionX, -directionY).mult(this.maxForce));
     }

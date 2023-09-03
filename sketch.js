@@ -17,11 +17,23 @@ const spawnDistanceInterval = 500;
 let lastRandomlane = startingLane;
 let spawned = false;
 let nnv;
+let cars;
+const populationSize=100;
 function setup() {
-  createCanvas(1000, windowHeight);
-  halfWidth = width / 2;
+  const canvasContainer = document.getElementById("canvas-container");
+  const canvasWidth = 800; // Set your desired canvas width
+
+  // Calculate the horizontal margin to center the canvas
+  const horizontalMargin = (windowWidth - canvasWidth) / 2;
+
+  // Create the canvas and position it
+  const cnv = createCanvas(canvasWidth, windowHeight);
+  cnv.parent("canvas-container"); // Set the parent to the container div
+  cnv.position(horizontalMargin, 0);
   frameRate(60);
+  halfWidth = width / 2;
   road = new Road(halfWidth / 2, halfWidth * 0.9, numOfLanes);
+
   car = new Car(
     road.getLaneCenter(startingLane),
     1000,
@@ -45,6 +57,12 @@ function setup() {
   ];
   //nnv=new NNvisual(0,0,200,200,10,car.brain)
 }
+function windowResized() {
+  // Recalculate and reposition the canvas if the window is resized
+  const horizontalMargin = (windowWidth - width) / 2;
+  resizeCanvas(1000, windowHeight);
+  //canvas.position(horizontalMargin, 0);
+}
 
 function draw() {
   background(100);
@@ -52,13 +70,50 @@ function draw() {
     startSim = true;
   }
   main();
-  fill(51);
+  fill(0);
   rect(halfWidth, 0, halfWidth, height);
-  Visualizer.drawNetwork(halfWidth, height / 2, car.brain);
-  //draw neaural network in the right half of the screen
-  // drawNeuralNetwork(halfWidth*1.5,height/2,40,car.brain)
-  //nnv.show()
+  visNetwork.drawNetwork(car.brain,halfWidth, 50, width/2, height-100);
 }
+
+
+function main() {
+  if (startSim) {
+    var offsetX, offsetY; // Correct variable names
+    [offsetX, offsetY] = centerCameraOnCar(car);
+    spawnTraffic();
+    push();
+    translate(offsetX, offsetY + height * 0.3);
+    road.show();
+    if (traffic.length > 0) {
+      for (let cars of traffic) {
+        cars.update(road.borders, []);
+        cars.show();
+      }
+    }
+    car.update(road.borders, traffic);
+    car.show();
+    pop();
+  }
+}
+
+function generateCar(n) {
+  const cars=[];
+  for (let i = 0; i < n; i++) {
+    cars.push(new Car(
+      road.getLaneCenter(startingLane),
+      1000,
+      0,
+      road.getLaneWidth() * 0.6,
+      1,
+      "AI"
+    ))
+  }
+    //cars.push(new Car(
+
+
+}
+
+
 
 function spawnTraffic() {
   if ((frameCount % 100) * frameRate() == 0) {
@@ -104,26 +159,6 @@ function spawnTraffic() {
         traffic.splice(i, 1);
       }
     }
-  }
-}
-
-function main() {
-  if (startSim) {
-    var offsetX, offsetY; // Correct variable names
-    [offsetX, offsetY] = centerCameraOnCar(car);
-    spawnTraffic();
-    push();
-    translate(offsetX, offsetY + height * 0.3);
-    road.show();
-    if (traffic.length > 0) {
-      for (let cars of traffic) {
-        cars.update(road.borders, []);
-        cars.show();
-      }
-    }
-    car.update(road.borders, traffic);
-    car.show();
-    pop();
   }
 }
 

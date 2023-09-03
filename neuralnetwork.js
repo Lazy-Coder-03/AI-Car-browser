@@ -40,7 +40,7 @@ class Level {
     }
   }
 
-  static feedForward(givenInputs, level, method = sigmoid) {
+  static feedForward(givenInputs, level, method = applyStepActivation) {
     for (let i = 0; i < givenInputs.length; i++) {
       level.inputs[i] = givenInputs[i];
     }
