@@ -1,5 +1,5 @@
 class Car {
-  constructor(x, y, ang, wid, speedfactor, type, col) {
+  constructor(x, y, ang, wid, speedfactor, type, debug, col) {
     this.pos = createVector(x, y);
     this.vel = createVector(0, 0);
     this.acc = createVector(0, 0);
@@ -10,6 +10,8 @@ class Car {
     } else {
       this.col = [col[0], col[1], col[2]];
     }
+    if (debug == undefined) debug = false;
+    this.debug = debug;
     this.speedfactor = speedfactor;
     this.angle = radians(ang);
     this.maxSpeed = 10;
@@ -108,47 +110,51 @@ class Car {
     fill(this.col[0], this.col[1], this.col[2], this.collided ? 50 : 255);
     stroke("black");
     rect(0, 0, this.w, this.h, this.w / 3, this.w / 3, 5, 5);
+    if (this.debug||this.type=="dummy") {
+      // Draw the speedometer
+      let speed = this.vel.mag();
+      let speedAngle = map(speed, 0, this.maxSpeed, -PI / 4, PI / 4);
+      let gaugeRadius = this.w / 1.5;
 
-    // Draw the speedometer
-    let speed = this.vel.mag();
-    let speedAngle = map(speed, 0, this.maxSpeed, -PI / 4, PI / 4);
-    let gaugeRadius = this.w / 1.5;
+      // Draw the speedometer arc
+      fill(0, 0, 100);
+      stroke(0);
+      arc(
+        0,
+        this.h * 0.5,
+        gaugeRadius * 2,
+        gaugeRadius * 2,
+        -(3 * PI) / 4,
+        -PI / 4,
+        PIE
+      );
 
-    // Draw the speedometer arc
-    fill(0, 0, 100);
-    stroke(0);
-    arc(
-      0,
-      this.h * 0.5,
-      gaugeRadius * 2,
-      gaugeRadius * 2,
-      -(3 * PI) / 4,
-      -PI / 4,
-      PIE
-    );
+      // Draw the speedometer needle
+      push();
+      translate(0, this.h * 0.5);
+      rotate(speedAngle - PI / 2);
+      strokeWeight(2);
+      line(0, 0, gaugeRadius * 0.9, 0);
+      pop();
 
-    // Draw the speedometer needle
-    push();
-    translate(0, this.h * 0.5);
-    rotate(speedAngle - PI / 2);
-    strokeWeight(2);
-    line(0, 0, gaugeRadius * 0.9, 0);
+      // Draw the speedometer text
+      textAlign(CENTER, CENTER);
+      textSize(14);
+      fill(0);
+      text("Speed", 0, this.h / 2 + 10);
+      textSize(20);
+      text(nf(this.vel.mag() * 10, 0, 2) + " pix/sec", 0, this.h / 2 + 30);
+
+    }
     pop();
+    if(this.debug){
+      this.showCollisionBox();
+      if (this.type != "dummy") this.sensor.show();
+    }
 
-    // Draw the speedometer text
-    textAlign(CENTER, CENTER);
-    textSize(14);
-    fill(0);
-    text("Speed", 0, this.h / 2 + 10);
-    textSize(20);
-    text(nf(this.vel.mag() * 10, 0, 2) + " pix/sec", 0, this.h / 2 + 30);
-
-    pop();
     // for (let p of this.polygon) {
     //   ellipse(p.x, p.y, 10, 10);
     // }
-    this.showCollisionBox();
-    if (this.type != "dummy") this.sensor.show();
   }
 
   isFacingUp() {
@@ -197,7 +203,7 @@ class Car {
       }
       //this.oldmove()
       //this.move();
-
+      //this.debug=false;
       this.sensor.update(roadBorders, traffic);
       for (let i = 0; i < this.sensor.distances.length; i++)
         this.offsets[i] = 1 - this.sensor.distances[i];
@@ -246,15 +252,15 @@ class Car {
       this.angle += this.angularSpeed * this.flip;
       if (this.angle > 2 * PI) this.angle -= 2 * PI;
     }
-    if (decision[3] > 0.5) {
+    if (decision[3] > 1) {
       this.vel.mult(0.9);
     }
 
     //5 outputs 0,1,2,3,4
     const directionX = sin(this.angle);
     const directionY = cos(this.angle);
-//forward
-    if (decision[2] > 0.5) {
+    //forward
+    if (decision[2] >= 0) {
       this.flip = 1;
       this.acc.add(createVector(directionX, -directionY).mult(this.maxForce));
     }

@@ -8,7 +8,7 @@ let halfWidth;
 let traffic;
 const maxTraffic = 10;
 const friction = 0.02;
-const numOfLanes = 5;
+const numOfLanes = 3;
 const startingLane = Math.floor(numOfLanes / 2);
 let startSim = false;
 let lastSpawnDistance = 0;
@@ -17,8 +17,11 @@ const spawnDistanceInterval = 500;
 let lastRandomlane = startingLane;
 let spawned = false;
 let nnv;
-let cars;
-const populationSize=100;
+const trafficSpawnProbability = 0.02;
+let cars = [];
+let prevCars = [];
+let bestCar;
+const populationSize = 250;
 function setup() {
   const canvasContainer = document.getElementById("canvas-container");
   const canvasWidth = 800; // Set your desired canvas width
@@ -33,22 +36,25 @@ function setup() {
   frameRate(60);
   halfWidth = width / 2;
   road = new Road(halfWidth / 2, halfWidth * 0.9, numOfLanes);
-
-  car = new Car(
-    road.getLaneCenter(startingLane),
-    1000,
-    0,
-    road.getLaneWidth() * 0.6,
-    1,
-    "AI"
-  ); //"player" instead of AI to control urself
+  cars = generateCar(populationSize);
+  bestCar = cars[0];
+  // car = new Car(
+  //   road.getLaneCenter(startingLane),
+  //   1000,
+  //   0,
+  //   road.getLaneWidth() * 0.6,
+  //   1,
+  //   "AI"
+  // ); //"player" instead of AI to control urself
   const randomLane = Math.floor(Math.random() * numOfLanes); // Random lane between 0 and numOfLanes-1
   const randomX = road.getLaneCenter(randomLane);
   const v = 0.5; //Math.random(0.2,0.5);
+  //console.log(cars)
+  let carposy = bestCar.pos.y;
   traffic = [
     new Car(
       randomX,
-      car.pos.y - height - 100, // Start traffic car above the screen
+      carposy - height - 100, // Start traffic car above the screen
       0,
       road.getLaneWidth() * 0.6,
       v,
@@ -69,18 +75,30 @@ function draw() {
   if (keyIsDown(83)) {
     startSim = true;
   }
-  main();
   fill(0);
   rect(halfWidth, 0, halfWidth, height);
-  visNetwork.drawNetwork(car.brain,halfWidth, 50, width/2, height-100);
-}
+  main();
 
+  //bestCar=cars.find(c=>c.y==Math.min(...cars.map(c=>c.y)))
+  //console.log(cars)
+  
+}
 
 function main() {
   if (startSim) {
     var offsetX, offsetY; // Correct variable names
-    [offsetX, offsetY] = centerCameraOnCar(car);
-    spawnTraffic();
+    bestCar = cars.find(
+      (c) => c.pos.y == Math.min(...cars.map((c) => c.pos.y))
+    );
+    //console.log(bestCar.pos);
+    if (bestCar) {
+      [offsetX, offsetY] = centerCameraOnCar(bestCar);
+      spawnTraffic(bestCar);
+      bestCar.debug=true;
+      console.log(bestCar.debug);
+      visNetwork.drawNetwork(bestCar.brain, halfWidth, 50, width / 2, height - 100);
+    }
+
     push();
     translate(offsetX, offsetY + height * 0.3);
     road.show();
@@ -90,39 +108,48 @@ function main() {
         cars.show();
       }
     }
-    car.update(road.borders, traffic);
-    car.show();
+    for (car of cars) {
+      if (car.isAlive) {
+        car.update(road.borders, traffic);
+        car.show();
+      } else {
+        const removedCar = cars.splice(cars.indexOf(car), 1)[0];
+        prevCars.push(removedCar);
+        console.log(cars.length, prevCars.length);
+      }
+    }
+
     pop();
   }
 }
 
 function generateCar(n) {
-  const cars=[];
+  const cars = [];
   for (let i = 0; i < n; i++) {
-    cars.push(new Car(
-      road.getLaneCenter(startingLane),
-      1000,
-      0,
-      road.getLaneWidth() * 0.6,
-      1,
-      "AI"
-    ))
+    cars.push(
+      new Car(
+        road.getLaneCenter(startingLane),
+        1000,
+        0,
+        road.getLaneWidth() * 0.6,
+        1,
+        "AI"
+      )
+    );
   }
-    //cars.push(new Car(
-
-
+  return cars;
 }
 
-
-
-function spawnTraffic() {
+function spawnTraffic(targetcar) {
+  let carposy = targetcar.pos.y;
+  //console.log(targetcar)
   if ((frameCount % 100) * frameRate() == 0) {
     spawned = false;
     console.log("reset spawned");
   }
-  if (startSim && !spawned && car.isAlive && round(car.pos.y) % 1000 <= car.h) {
-    const spawnProbability = 0.01; // Adjust this value to control spawn frequency
-    if (Math.random() < spawnProbability) {
+  if (startSim && !spawned && round(carposy) % 1000 <= 50) {
+    //const spawnProbability = 0.05; // Adjust this value to control spawn frequency
+    if (Math.random() < trafficSpawnProbability) {
       const randomLane = Math.floor(Math.random() * numOfLanes); // Random lane between 0 and numOfLanes-1
       if (randomLane == lastRandomlane) {
         return;
@@ -133,7 +160,7 @@ function spawnTraffic() {
       // Create a new car to be spawned
       const newTrafficCar = new Car(
         randomX,
-        car.pos.y - height - 100, // Start traffic car above the screen
+        carposy - height - 100, // Start traffic car above the screen
         0,
         road.getLaneWidth() * 0.6,
         v,
@@ -153,13 +180,13 @@ function spawnTraffic() {
       }
     }
   }
-  if (!car.isAlive) {
-    for (let i = traffic.length - 1; i >= 0; i--) {
-      if (Math.abs(traffic[i].pos.y - car.pos.y) > 1000) {
-        traffic.splice(i, 1);
-      }
-    }
-  }
+  // if (!car.isAlive) {
+  //   for (let i = traffic.length - 1; i >= 0; i--) {
+  //     if (Math.abs(traffic[i].pos.y - car.pos.y) > 1000) {
+  //       traffic.splice(i, 1);
+  //     }
+  //   }
+  // }
 }
 
 function centerCameraOnCar(car, easing = 1) {
