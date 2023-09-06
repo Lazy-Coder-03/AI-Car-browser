@@ -1,5 +1,10 @@
 class Car {
-  constructor(x, y, ang, wid, speedfactor, type, debug, col) {
+  constructor(x, y, ang, wid, speedfactor, type, i, brain, col) {
+    if (i == undefined) i = 0;
+    else {
+      this.id = i;
+    }
+    this.braked = false;
     this.pos = createVector(x, y);
     this.vel = createVector(0, 0);
     this.acc = createVector(0, 0);
@@ -10,8 +15,8 @@ class Car {
     } else {
       this.col = [col[0], col[1], col[2]];
     }
-    if (debug == undefined) debug = false;
-    this.debug = debug;
+    //if (debug == undefined) debug = false;
+    this.debug = false;
     this.speedfactor = speedfactor;
     this.angle = radians(ang);
     this.maxSpeed = 10;
@@ -25,8 +30,13 @@ class Car {
     if (this.type != "dummy") {
       this.sensor = new Sensor(this, this.fov / 2, this.numOfSensors);
       //this.brain = new NeuralNetwork(this.numOfSensors, 6, 5);
-      this.brain = new NeuralNetwork([this.numOfSensors, 8, 4]); //for now only 3 layers
-      this.offsets = Array(this.numOfSensors);
+
+      this.offsets = Array(this.numOfSensors + 1);
+    }
+    if (brain == undefined) {
+      this.brain = new NeuralNetwork(neuralStructure); //for now only 3 layers
+    } else {
+      this.brain = brain;
     }
     this.useBrain = type == "AI" ? true : false;
     this.moving = false;
@@ -47,9 +57,12 @@ class Car {
     ];
     this.controls = new Controls();
     this.collided = false;
+    this.collisionwithRoad = false;
+    this.collisionwithTraffic = false;
     this.isAlive = true;
     this.spawnTime = millis();
     this.decisions = [];
+    this.fitness = 0;
   }
   createPolygon() {
     const halfWidth = this.w / 2;
@@ -110,7 +123,11 @@ class Car {
     fill(this.col[0], this.col[1], this.col[2], this.collided ? 50 : 255);
     stroke("black");
     rect(0, 0, this.w, this.h, this.w / 3, this.w / 3, 5, 5);
-    if (this.debug||this.type=="dummy") {
+    fill(0, 0, 0);
+    textSize(this.w / 3);
+    textAlign(CENTER, CENTER);
+    text(nf(this.fitness, 0, 4), 0, 0);
+    if (this.debug || this.type == "dummy") {
       // Draw the speedometer
       let speed = this.vel.mag();
       let speedAngle = map(speed, 0, this.maxSpeed, -PI / 4, PI / 4);
@@ -144,12 +161,18 @@ class Car {
       text("Speed", 0, this.h / 2 + 10);
       textSize(20);
       text(nf(this.vel.mag() * 10, 0, 2) + " pix/sec", 0, this.h / 2 + 30);
+      //push();
+      //translate(this.pos.x, this.pos.y);
 
+      //pop();
     }
+
     pop();
-    if(this.debug){
+    if (this.debug) {
       this.showCollisionBox();
-      if (this.type != "dummy") this.sensor.show();
+      if (this.type != "dummy") {
+        this.sensor.show();
+      }
     }
 
     // for (let p of this.polygon) {
@@ -207,6 +230,11 @@ class Car {
       this.sensor.update(roadBorders, traffic);
       for (let i = 0; i < this.sensor.distances.length; i++)
         this.offsets[i] = 1 - this.sensor.distances[i];
+      let a = map(abs(this.vel.y), 0, this.maxSpeed, 0, 1);
+      //console.log(a)
+      this.offsets[this.offsets.length - 1] = a;
+      //console.log(this.offsets[this.offsets.length-1])
+
       //console.log(this.offsets);
       //const output=this.brain.feedForward(this.offsets);
       this.decisions = NeuralNetwork.feedForward(this.offsets, this.brain);
@@ -219,19 +247,44 @@ class Car {
       if (this.checkCollisionTraffic(traffic)) {
         this.isAlive = false;
         this.collided = true;
-        console.log("collided with traffic");
+        //console.log("collided with traffic");
         this.vel.mult(0);
       }
       if (this.checkCollisionRoad(roadBorders)) {
         this.isAlive = false;
         this.collided = true;
-        console.log("collided");
+        //console.log("collided");
         this.vel.mult(0);
       }
     }
+    this.calculateFitness();
+    //console.log(this.fitness)
 
     // console.log(this.sensor.roadDistances, this.sensor.trafficDistances);
     //console.log(this.sensor.distances);
+  }
+  calculateFitness() {
+    //make fitness grow linear with y at first untill fitness <0.2 then make it exponential
+    if (this.isAlive) {
+      if (this.moving && this.vel.mag() > 2) {
+        this.fitness += 0.0001;
+      }else{
+        this.fitness -= 0.0002;
+      }
+      // if (this.fitness < 0.5) {
+      //   this.fitness += 0.0001;
+      // } else {
+      //   //console.log(this.id, this.fitness)
+      //   this.fitness *= 1.0001;
+      // }
+
+
+      //constrain the fitness between 0 to 1
+    }
+    if (this.collided) {
+      this.fitness /= 100;
+    }
+    this.fitness = constrain(this.fitness, 0, 1);
   }
 
   AImove(decision) {
@@ -243,24 +296,30 @@ class Car {
       this.moving = true;
     }
 
-    if (decision[0] > 0.5 && decision[1] < 0.5) {
+    if (decision[0] == 1) {
+      // 0.5 && decision[1] < 0.5) {
       this.angle -= this.angularSpeed * this.flip;
       if (this.angle < 0) this.angle += 2 * PI;
     }
 
-    if (decision[1] > 0.5 && decision[0] < 0.5) {
+    if (decision[1] == 1) {
+      // && decision[0] < 0.5) {
       this.angle += this.angularSpeed * this.flip;
       if (this.angle > 2 * PI) this.angle -= 2 * PI;
     }
-    if (decision[3] > 1) {
+    if (decision[2] > 1.5) {
       this.vel.mult(0.9);
+      this.braked = true;
+    } else {
+      this.braked = false;
     }
 
     //5 outputs 0,1,2,3,4
     const directionX = sin(this.angle);
     const directionY = cos(this.angle);
     //forward
-    if (decision[2] >= 0) {
+    if (true) {
+      //if (decision[2] > 0.5) {
       this.flip = 1;
       this.acc.add(createVector(directionX, -directionY).mult(this.maxForce));
     }
@@ -466,6 +525,18 @@ class Car {
 
     return false; // No collision
   }
+
+  isCarinLane(lane) {
+    const laneCenter = road.getLaneCenter(lane);
+    const laneWidth = road.getLaneWidth();
+    if (
+      this.pos.x > laneCenter - laneWidth / 2 &&
+      this.pos.x < laneCenter + laneWidth / 2
+    ) {
+      return true;
+    }
+    return false;
+  }
   showCollisionBox() {
     push();
     strokeWeight(2);
@@ -478,4 +549,36 @@ class Car {
     endShape(CLOSE);
     pop();
   }
+
+  mutate() {
+    //console.log(this.brain);
+    this.brain.mutate(0.08);
+  }
+  static crossover(parent1, parent2) {
+    let child = new Car(
+      road.getLaneCenter(startingLane),
+      0,
+      0,
+      road.getLaneWidth() * 0.6,
+      1,
+      "AI",
+      floor((parent1.id + parent2.id) / 2),
+      NeuralNetwork.crossOver(
+        parent1.brain,
+        parent2.brain,
+        parent1.fitness,
+        parent2.fitness
+      ),
+      random(1) > 0.5
+        ? [parent1.col[0], parent1.col[1], parent1.col[2]]
+        : [parent2.col[0], parent2.col[1], parent2.col[2]]
+    );
+    return child;
+  }
+
+  // crossOver(partner){
+  //   let child=new Car(this.pos.x,this.pos.y,0,this.w,this.speedfactor,this.type,this.debug,this.col);
+  //   child.brain=NeuralNetwork.crossOver(this.brain,partner.brain);
+  //   return child;
+  // }
 }

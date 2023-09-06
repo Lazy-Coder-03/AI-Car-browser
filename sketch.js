@@ -17,11 +17,14 @@ const spawnDistanceInterval = 500;
 let lastRandomlane = startingLane;
 let spawned = false;
 let nnv;
-const trafficSpawnProbability = 0.02;
+const trafficSpawnProbability = 0.08;
 let cars = [];
 let prevCars = [];
 let bestCar;
-const populationSize = 250;
+let onlyShowBest = false;
+const populationSize = 500;
+let gen = 0;
+let neuralStructure = [8, 10, 2];
 function setup() {
   const canvasContainer = document.getElementById("canvas-container");
   const canvasWidth = 800; // Set your desired canvas width
@@ -38,6 +41,9 @@ function setup() {
   road = new Road(halfWidth / 2, halfWidth * 0.9, numOfLanes);
   cars = generateCar(populationSize);
   bestCar = cars[0];
+  console.log(bestCar.isCarinLane(0));
+  console.log(bestCar.isCarinLane(1));
+  console.log(bestCar.isCarinLane(2));
   // car = new Car(
   //   road.getLaneCenter(startingLane),
   //   1000,
@@ -47,22 +53,34 @@ function setup() {
   //   "AI"
   // ); //"player" instead of AI to control urself
   const randomLane = Math.floor(Math.random() * numOfLanes); // Random lane between 0 and numOfLanes-1
-  const randomX = road.getLaneCenter(randomLane);
+  const randomX = road.getLaneCenter(startingLane);
   const v = 0.5; //Math.random(0.2,0.5);
   //console.log(cars)
   let carposy = bestCar.pos.y;
   traffic = [
     new Car(
       randomX,
-      carposy - height - 100, // Start traffic car above the screen
+      carposy - 200, // Start traffic car above the screen
       0,
       road.getLaneWidth() * 0.6,
       v,
-      "dummy"
+      "dummy",
+      0
     ),
   ];
   //nnv=new NNvisual(0,0,200,200,10,car.brain)
 }
+
+function getBestCar(cars) {
+  let bestCar = cars[0];
+  for (let i = 1; i < cars.length; i++) {
+    if (cars[i].fitness > bestCar.fitness) {
+      bestCar = cars[i];
+    }
+  }
+  return bestCar;
+}
+
 function windowResized() {
   // Recalculate and reposition the canvas if the window is resized
   const horizontalMargin = (windowWidth - width) / 2;
@@ -77,26 +95,40 @@ function draw() {
   }
   fill(0);
   rect(halfWidth, 0, halfWidth, height);
+  //let c = getBestCar(cars);
+  //if (c) {
+  //  console.log(c.fitness);
+  //}
   main();
+  let c = getBestCar(cars);
+  if (cars.length == 0 || c.fitness > 0.99) {
+    gen++;
+    cars = startNewGeneration(prevCars);
+    prevCars = [];
+    console.log("new generation " + gen + " started");
+  }
 
   //bestCar=cars.find(c=>c.y==Math.min(...cars.map(c=>c.y)))
   //console.log(cars)
-  
 }
 
 function main() {
   if (startSim) {
     var offsetX, offsetY; // Correct variable names
-    bestCar = cars.find(
-      (c) => c.pos.y == Math.min(...cars.map((c) => c.pos.y))
-    );
-    //console.log(bestCar.pos);
+    bestCar = getBestCar(cars);
+    //console.log(bestCar);
     if (bestCar) {
       [offsetX, offsetY] = centerCameraOnCar(bestCar);
       spawnTraffic(bestCar);
-      bestCar.debug=true;
-      console.log(bestCar.debug);
-      visNetwork.drawNetwork(bestCar.brain, halfWidth, 50, width / 2, height - 100);
+      bestCar.debug = true;
+      // console.log(bestCar.debug);
+      visNetwork.drawNetwork(
+        bestCar.brain,
+        halfWidth,
+        50,
+        width / 2,
+        height - 100
+      );
     }
 
     push();
@@ -109,13 +141,19 @@ function main() {
       }
     }
     for (car of cars) {
-      if (car.isAlive) {
+      if (car.isAlive && car.isFacingUp()) {
         car.update(road.borders, traffic);
-        car.show();
+        if (onlyShowBest) {
+          if (car == bestCar) {
+            car.show();
+          }
+        } else {
+          car.show();
+        }
       } else {
         const removedCar = cars.splice(cars.indexOf(car), 1)[0];
         prevCars.push(removedCar);
-        console.log(cars.length, prevCars.length);
+        //console.log(cars.length, prevCars.length);
       }
     }
 
@@ -129,11 +167,12 @@ function generateCar(n) {
     cars.push(
       new Car(
         road.getLaneCenter(startingLane),
-        1000,
+        100000,
         0,
         road.getLaneWidth() * 0.6,
         1,
-        "AI"
+        "AI",
+        i
       )
     );
   }
@@ -145,7 +184,7 @@ function spawnTraffic(targetcar) {
   //console.log(targetcar)
   if ((frameCount % 100) * frameRate() == 0) {
     spawned = false;
-    console.log("reset spawned");
+    //console.log("reset spawned");
   }
   if (startSim && !spawned && round(carposy) % 1000 <= 50) {
     //const spawnProbability = 0.05; // Adjust this value to control spawn frequency
@@ -171,11 +210,11 @@ function spawnTraffic(targetcar) {
       if (!newTrafficCar.checkCollisionTraffic([...traffic, newTrafficCar])) {
         traffic.push(newTrafficCar);
         spawned = true;
-        console.log("Spawned traffic car in lane " + randomLane);
+        // console.log("Spawned traffic car in lane " + randomLane);
         if (traffic.length > maxTraffic) {
           // Remove the oldest car (first element) in the traffic array
           traffic.shift();
-          console.log("Despawned the oldest traffic car");
+          // console.log("Despawned the oldest traffic car");
         }
       }
     }
@@ -197,3 +236,86 @@ function centerCameraOnCar(car, easing = 1) {
 
   return [offsetX, offsetY];
 }
+
+function startNewGeneration(oldcars) {
+  let newcars = [];
+  let bestCar = getBestCar(oldcars);
+  newcars[0]=bestCar;
+  console.log(bestCar)
+  // Generate a single traffic car by default
+  traffic = [];
+  //generateCar(1);
+
+
+  for (let i = 1; i < oldcars.length; i++) {
+    let car = pickOne(oldcars);
+    //let p2 = pickOne(oldcars);
+    //console.log(p1.id, p2.id);
+    //let child = Car.crossover(p1, p2);
+    let child = new Car(
+      road.getLaneCenter(startingLane),
+      0,
+      0,
+      road.getLaneWidth() * 0.6,
+      1,
+      "AI",
+      i,
+      car.brain,
+      car.col
+    );
+    child.brain.mutate(0.5);
+    newcars[i]=child;
+  }
+
+  return newcars;
+}
+
+function pickOne(cars) {
+  let index = 0;
+  //sort the cars array from highest fitness to lowest
+  cars.sort((a, b) => b.fitness - a.fitness);
+  let r = random(1);
+  while (r > 0 && index < cars.length) {
+    // console.log(cars[index].fitness)
+    r = r - cars[index].fitness;
+    index++;
+  }
+  index--;
+  // let child = new Car(
+  //   road.getLaneCenter(startingLane),
+  //   0,
+  //   0,
+  //   road.getLaneWidth() * 0.6,
+  //   1,
+  //   "AI",
+  //   index,
+  //   car.brain,
+  //   car.col
+  // );
+  // // child.brain = car.brain;
+  // child.mutate();
+
+  return cars[index];
+}
+
+// function pickOne(cars) {
+//   let ind=0;
+//   //sort in deceasing order of car fitness so that the first car has the highest fitness
+//   cars.sort((a, b) => b.fitness - a.fitness);
+//   let r = random(0.02);
+//   for(let i=0;i<cars.length;i++){
+//     if(r<cars[i].fitness){
+//       ind=i;
+//       break;
+//     }
+//   }
+//   return cars[ind];
+
+// let r = random(1);
+// //make it so it is more likely cars are picked with higher fitness
+// while (r > 0 && ind < cars.length) {
+//   r = r - cars[ind].fitness;
+//   ind++;
+// }
+// ind--;
+// return cars[ind];
