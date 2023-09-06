@@ -31,7 +31,7 @@ class Car {
       this.sensor = new Sensor(this, this.fov / 2, this.numOfSensors);
       //this.brain = new NeuralNetwork(this.numOfSensors, 6, 5);
 
-      this.offsets = Array(this.numOfSensors + 1);
+      this.offsets = Array(this.numOfSensors).fill(0);
     }
     if (brain == undefined) {
       this.brain = new NeuralNetwork(neuralStructure); //for now only 3 layers
@@ -230,9 +230,9 @@ class Car {
       this.sensor.update(roadBorders, traffic);
       for (let i = 0; i < this.sensor.distances.length; i++)
         this.offsets[i] = 1 - this.sensor.distances[i];
-      let a = map(abs(this.vel.y), 0, this.maxSpeed, 0, 1);
+      //let a = map(abs(this.vel.y), 0, this.maxSpeed, 0, 1);
       //console.log(a)
-      this.offsets[this.offsets.length - 1] = a;
+      //this.offsets[this.offsets.length - 1] = a;
       //console.log(this.offsets[this.offsets.length-1])
 
       //console.log(this.offsets);
@@ -263,26 +263,30 @@ class Car {
     // console.log(this.sensor.roadDistances, this.sensor.trafficDistances);
     //console.log(this.sensor.distances);
   }
+  setPos(x, y) {
+    this.pos.x = x;
+    this.pos.y = y;
+  }
   calculateFitness() {
     //make fitness grow linear with y at first untill fitness <0.2 then make it exponential
     if (this.isAlive) {
-      if (this.moving && this.vel.mag() > 2) {
+      if (this.moving && this.vel.mag() > this.maxSpeed * 0.5) {
         this.fitness += 0.0001;
-      }else{
-        this.fitness -= 0.0002;
+      } else {
+        this.fitness -= 0.0005;
       }
-      // if (this.fitness < 0.5) {
-      //   this.fitness += 0.0001;
-      // } else {
-      //   //console.log(this.id, this.fitness)
-      //   this.fitness *= 1.0001;
-      // }
 
+      if (this.fitness > 0.1) {
+        this.fitness *= 1.0001;
+      }
+      // if(this.vel.mag()<0.6*this.maxSpeed && this.vel.mag()>0.4* this.maxSpeed){
+      //   this.fitness-=0.1;
+      // }
 
       //constrain the fitness between 0 to 1
     }
     if (this.collided) {
-      this.fitness /= 100;
+      this.fitness /= 1;
     }
     this.fitness = constrain(this.fitness, 0, 1);
   }
@@ -296,30 +300,42 @@ class Car {
       this.moving = true;
     }
 
-    if (decision[0] == 1) {
-      // 0.5 && decision[1] < 0.5) {
+    //for sigmoid activision function
+    if (decision[0] > 0.5) {
       this.angle -= this.angularSpeed * this.flip;
       if (this.angle < 0) this.angle += 2 * PI;
     }
 
-    if (decision[1] == 1) {
-      // && decision[0] < 0.5) {
+    if (decision[1] > 0.5) {
       this.angle += this.angularSpeed * this.flip;
       if (this.angle > 2 * PI) this.angle -= 2 * PI;
     }
-    if (decision[2] > 1.5) {
-      this.vel.mult(0.9);
-      this.braked = true;
-    } else {
-      this.braked = false;
-    }
+    
+//for step activision function
+    // if (decision[0]==1) {
+    //   // 0.5 && decision[1] < 0.5) {
+    //   this.angle -= this.angularSpeed * this.flip;
+    //   if (this.angle < 0) this.angle += 2 * PI;
+    // }
+
+    // if (decision[1] == 1) {
+    //   // && decision[0] < 0.5) {
+    //   this.angle += this.angularSpeed * this.flip;
+    //   if (this.angle > 2 * PI) this.angle -= 2 * PI;
+    // }
+    // if (decision[2] == 1) {
+    //   this.vel.mult(0.9);
+    //   this.braked = true;
+    // } else {
+    //   this.braked = false;
+    // }
 
     //5 outputs 0,1,2,3,4
     const directionX = sin(this.angle);
     const directionY = cos(this.angle);
     //forward
     if (true) {
-      //if (decision[2] > 0.5) {
+    //if (decision[2] == 1) {
       this.flip = 1;
       this.acc.add(createVector(directionX, -directionY).mult(this.maxForce));
     }

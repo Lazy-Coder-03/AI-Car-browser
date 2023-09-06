@@ -28,7 +28,8 @@ class NeuralNetwork {
     function mutate(val) {
       if (Math.random() < rate) {
         mutated = true;
-        return val + randomGaussian(0, 0.1);
+        val=constrain(val+randomGaussian(0,0.05), -1, 1)
+        return val;
       } else {
         mutated = false;
         return val;

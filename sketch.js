@@ -17,14 +17,14 @@ const spawnDistanceInterval = 500;
 let lastRandomlane = startingLane;
 let spawned = false;
 let nnv;
-const trafficSpawnProbability = 0.08;
+const trafficSpawnProbability = 0.1;
 let cars = [];
 let prevCars = [];
 let bestCar;
-let onlyShowBest = false;
-const populationSize = 500;
+let onlyShowBest = true;
+const populationSize = 5000;
 let gen = 0;
-let neuralStructure = [8, 10, 2];
+let neuralStructure = [7, 10, 2];
 function setup() {
   const canvasContainer = document.getElementById("canvas-container");
   const canvasWidth = 800; // Set your desired canvas width
@@ -78,6 +78,7 @@ function getBestCar(cars) {
       bestCar = cars[i];
     }
   }
+ // console.log(bestCar);
   return bestCar;
 }
 
@@ -134,12 +135,7 @@ function main() {
     push();
     translate(offsetX, offsetY + height * 0.3);
     road.show();
-    if (traffic.length > 0) {
-      for (let cars of traffic) {
-        cars.update(road.borders, []);
-        cars.show();
-      }
-    }
+
     for (car of cars) {
       if (car.isAlive && car.isFacingUp()) {
         car.update(road.borders, traffic);
@@ -154,6 +150,12 @@ function main() {
         const removedCar = cars.splice(cars.indexOf(car), 1)[0];
         prevCars.push(removedCar);
         //console.log(cars.length, prevCars.length);
+      }
+    }
+    if (traffic.length > 0) {
+      for (let cars of traffic) {
+        cars.update(road.borders, []);
+        cars.show();
       }
     }
 
@@ -182,11 +184,12 @@ function generateCar(n) {
 function spawnTraffic(targetcar) {
   let carposy = targetcar.pos.y;
   //console.log(targetcar)
-  if ((frameCount % 100) * frameRate() == 0) {
+  if ((frameCount % 30) == 0) {
     spawned = false;
-    //console.log("reset spawned");
+    console.log("reset spawned");
   }
-  if (startSim && !spawned && round(carposy) % 1000 <= 50) {
+  let spawnfact=100
+  if (startSim && !spawned && round(carposy) % 1000 <= spawnfact) {
     //const spawnProbability = 0.05; // Adjust this value to control spawn frequency
     if (Math.random() < trafficSpawnProbability) {
       const randomLane = Math.floor(Math.random() * numOfLanes); // Random lane between 0 and numOfLanes-1
@@ -210,11 +213,11 @@ function spawnTraffic(targetcar) {
       if (!newTrafficCar.checkCollisionTraffic([...traffic, newTrafficCar])) {
         traffic.push(newTrafficCar);
         spawned = true;
-        // console.log("Spawned traffic car in lane " + randomLane);
+         console.log("Spawned traffic car in lane " + randomLane);
         if (traffic.length > maxTraffic) {
           // Remove the oldest car (first element) in the traffic array
           traffic.shift();
-          // console.log("Despawned the oldest traffic car");
+          console.log("Despawned the oldest traffic car");
         }
       }
     }
@@ -237,24 +240,61 @@ function centerCameraOnCar(car, easing = 1) {
   return [offsetX, offsetY];
 }
 
+function generateRandomCar() {
+  //const randomLane = Math.floor(Math.random() * numOfLanes);
+  const randomX = road.getLaneCenter(startingLane);
+  const v = 1; // Adjust this as needed
+  const randomID = floor((populationSize+1)*Math.random()); // You can set a unique ID here
+  console.log("random car with id "+randomID+" was generated");
+  // Create a new car with random properties
+  const randomCar = new Car(
+    randomX,
+    100000,
+    0,
+    road.getLaneWidth() * 0.6,
+    v,
+    "AI",
+    randomID
+  );
+
+  // Optionally mutate the random car's brain if needed
+  //randomCar.brain.mutate(0.3);
+
+  return randomCar;
+}
+
 function startNewGeneration(oldcars) {
   let newcars = [];
   let bestCar = getBestCar(oldcars);
-  newcars[0]=bestCar;
-  console.log(bestCar)
+  console.log(bestCar);
+  newcars[0] = bestCar;
+  bestCar.setPos(road.getLaneCenter(startingLane), 100000); //.setPos(road.getLaneCenter(startingLane),100000)
+  console.log(bestCar.fitness);
+  bestCar.fitness = 0;
   // Generate a single traffic car by default
-  traffic = [];
+  traffic = [
+    new Car(
+      road.getLaneCenter(startingLane),
+      100000-200,
+      0,
+      road.getLaneWidth() * 0.6,
+      0.5,
+      "dummy",
+      0
+    )  
+  ];
   //generateCar(1);
-
-
-  for (let i = 1; i < oldcars.length; i++) {
+  // for(let i=1;i<11;i++){
+  //   newcars.push(generateRandomCar());
+  // }
+  for (let i = 1; i < populationSize; i++) {
     let car = pickOne(oldcars);
     //let p2 = pickOne(oldcars);
     //console.log(p1.id, p2.id);
     //let child = Car.crossover(p1, p2);
     let child = new Car(
       road.getLaneCenter(startingLane),
-      0,
+      100000,
       0,
       road.getLaneWidth() * 0.6,
       1,
@@ -263,8 +303,8 @@ function startNewGeneration(oldcars) {
       car.brain,
       car.col
     );
-    child.brain.mutate(0.5);
-    newcars[i]=child;
+    child.brain.mutate(0.01);
+    newcars.push(child);
   }
 
   return newcars;
@@ -272,6 +312,7 @@ function startNewGeneration(oldcars) {
 
 function pickOne(cars) {
   let index = 0;
+  //let sortedCars = [...cars];
   //sort the cars array from highest fitness to lowest
   cars.sort((a, b) => b.fitness - a.fitness);
   let r = random(1);
